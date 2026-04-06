@@ -15,7 +15,8 @@ matplotlib.use("Agg")
 import matplotlib.pyplot as plt
 import seaborn as sns
 from scipy import stats
-
+import io
+path = "data/student_performance.csv"
 
 def load_and_profile(filepath):
     """Load the dataset and generate a data profile report.
@@ -35,8 +36,23 @@ def load_and_profile(filepath):
     """
     # TODO: Load the dataset and report its shape, data types, missing values,
     #       and descriptive statistics to output/data_profile.txt
-    pass
+    df = pd.read_csv(filepath)
+    buffer = io.StringIO()
+    df.info(buf=buffer)
+    info_text = buffer.getvalue()
 
+    with open("output/data_profile.txt", "w") as f:
+        f.write("--- Data Profile Report ---\n\n")
+        f.write(f"Shape: {df.shape}\n\n")
+        f.write(f"info: {info_text}\n\n")
+        f.write("Missing Values:\n")
+        f.write(df.isnull().sum().to_string())
+    # Impute commute_minutes with median (10% missing)
+    df['commute_minutes'] = df['commute_minutes'].fillna(df['commute_minutes'].median())
+    
+    # Drop rows with missing study_hours_weekly (5% missing)
+    df = df.dropna(subset=['study_hours_weekly'])
+    return df
 
 def plot_distributions(df):
     """Create distribution plots for key numeric variables.
@@ -52,12 +68,33 @@ def plot_distributions(df):
         as PNG files in the output/ directory. Each plot should have a
         descriptive title that states what the distribution reveals.
     """
+    # Set a global colorblind-safe palette
+    sns.set_palette('colorblind')
     # TODO: Create distribution plots for numeric columns like GPA,
     #       study hours, attendance, and commute minutes
     # TODO: Use histograms with KDE overlay (sns.histplot) or box plots
     # TODO: Save each plot to the output/ directory
-    pass
 
+    # --- Plot 1: GPA Distribution ---
+
+    # Setup the figure and axis using Object-Oriented style
+    fig, ax = plt.subplots(figsize=(8, 5))
+
+    #Select plot type (Histogram with KDE)
+    #pass the 'ax' object to Seaborn to draw inside our prepared frame
+    sns.histplot(data=df, x='gpa', kde=True, color='teal', ax=ax)
+    
+    #descriptive titles and labels
+    ax.set_title('Distribution of Student GPA at Hashemite Technical University')
+    ax.set_xlabel('GPA')
+    ax.set_ylabel('Frequency')
+    
+    #Final layout adjustments and saving
+    plt.tight_layout()
+    fig.savefig('output/gpa_distribution.png')
+    
+    #Close the figure to free up memory
+    plt.close(fig)
 
 def plot_correlations(df):
     """Analyze and visualize relationships between numeric variables.
@@ -106,7 +143,10 @@ def main():
     os.makedirs("output", exist_ok=True)
 
     # TODO: Load and profile the dataset
+    df = load_and_profile(path)
+    
     # TODO: Generate distribution plots
+    plot_distributions(df)
     # TODO: Analyze correlations
     # TODO: Run hypothesis tests
     # TODO: Write a FINDINGS.md summarizing your analysis
